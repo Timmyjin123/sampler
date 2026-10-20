@@ -15,17 +15,17 @@ jobs:
         run: xcodebuild -version
       - name: Build for simulator
         run: |
-          set -o pipefail
           xcodebuild -project GrainPad.xcodeproj -scheme GrainPad -configuration Debug \
             -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
-            -derivedDataPath build/sim CODE_SIGNING_ALLOWED=NO build | tee sim.log | grep -E "error:|warning:|BUILD" || true
+            -derivedDataPath build/sim CODE_SIGNING_ALLOWED=NO build > sim.log 2>&1 || true
+          grep -E "error:|BUILD (SUCCEEDED|FAILED)" sim.log | head -60
           grep -q "BUILD SUCCEEDED" sim.log
       - name: Build for device (unsigned)
         run: |
-          set -o pipefail
           xcodebuild -project GrainPad.xcodeproj -scheme GrainPad -configuration Release \
             -sdk iphoneos -destination 'generic/platform=iOS' \
-            -derivedDataPath build/dev CODE_SIGNING_ALLOWED=NO build | tee dev.log | grep -E "error:|BUILD" || true
+            -derivedDataPath build/dev CODE_SIGNING_ALLOWED=NO build > dev.log 2>&1 || true
+          grep -E "error:|BUILD (SUCCEEDED|FAILED)" dev.log | head -60
           grep -q "BUILD SUCCEEDED" dev.log
       - name: Package unsigned IPA
         run: |
@@ -40,5 +40,5 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: grainpad-build-logs
-          path: *.log
+          name: build-logs
+          path: "*.log"
