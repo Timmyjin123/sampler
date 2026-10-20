@@ -1,0 +1,7 @@
+build/
+out/
+engine_test
+*.log
+xcuserdata/
+DerivedData/
+.DS_Store

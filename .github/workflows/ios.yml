@@ -1,0 +1,44 @@
+name: ios
+on:
+  push:
+  workflow_dispatch:
+jobs:
+  ios:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Engine tests
+        run: |
+          clang++ -std=c++17 -O2 -IGrainPad/Engine tests/engine_test.cpp GrainPad/Engine/*.cpp -o engine_test
+          ./engine_test
+      - name: Xcode version
+        run: xcodebuild -version
+      - name: Build for simulator
+        run: |
+          set -o pipefail
+          xcodebuild -project GrainPad.xcodeproj -scheme GrainPad -configuration Debug \
+            -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build/sim CODE_SIGNING_ALLOWED=NO build | tee sim.log | grep -E "error:|warning:|BUILD" || true
+          grep -q "BUILD SUCCEEDED" sim.log
+      - name: Build for device (unsigned)
+        run: |
+          set -o pipefail
+          xcodebuild -project GrainPad.xcodeproj -scheme GrainPad -configuration Release \
+            -sdk iphoneos -destination 'generic/platform=iOS' \
+            -derivedDataPath build/dev CODE_SIGNING_ALLOWED=NO build | tee dev.log | grep -E "error:|BUILD" || true
+          grep -q "BUILD SUCCEEDED" dev.log
+      - name: Package unsigned IPA
+        run: |
+          mkdir -p out/Payload
+          cp -R build/dev/Build/Products/Release-iphoneos/GrainPad.app out/Payload/
+          cd out && zip -qr GrainPad-unsigned.ipa Payload
+      - uses: actions/upload-artifact@v4
+        with:
+          name: GrainPad-unsigned-ipa
+          path: out/GrainPad-unsigned.ipa
+      - name: Upload logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: grainpad-build-logs
+          path: *.log
