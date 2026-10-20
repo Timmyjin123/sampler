@@ -38,6 +38,8 @@ typedef NS_ENUM(NSInteger, GPRecordSource) {
       completion:(void (^)(int frames))completion;
 /// Synchronous variant for project loading (call on main thread).
 - (int)loadFileNow:(NSURL *)url intoPad:(int)pad;
+/// Renders a pattern offline (loops passes + 2 s tail) and writes it as a 24-bit stereo WAV.
+- (BOOL)bouncePattern:(int)pattern loops:(int)loops toURL:(NSURL *)url error:(NSError * _Nullable * _Nullable)error;
 /// Writes the pad's audio as a 24-bit WAV.
 - (BOOL)writePad:(int)pad toURL:(NSURL *)url error:(NSError * _Nullable * _Nullable)error;
 

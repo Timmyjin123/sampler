@@ -365,25 +365,96 @@ int main() {
     }
 
     resetAll();
-    // ------------------------------------------------- starter kit
-    {
-        gp_load_starter_kit();
-        const char* names[16]; for (int p = 0; p < 16; ++p) names[p] = gp_starter_kit_name(p);
+    // ------------------------------------------------- kits
+    CHECK(gp_kit_count() >= 7, "kit library has %d kits", gp_kit_count());
+    for (int k = 0; k < gp_kit_count(); ++k) {
+        gp_load_kit(k);
         int loaded = 0; for (int p = 0; p < 16; ++p) loaded += gp_pad_has_sample(p);
-        CHECK(loaded == 16 && std::string(names[0]) == "Kick", "starter kit fills all pads");
         render(BLOCK); gp_collect_garbage();
         gp_set_playing(1);
-        auto r = render(SR * 6);
-        CHECK(finite(r) && peak(r) > 0.3f && peak(r) <= 1.0f, "demo beat plays (peak %.2f)", peak(r));
+        auto r = render(SR * 4);
         gp_set_playing(0); render(BLOCK);
+        bool padsOk = true; int quiet = -1;
         for (int p = 0; p < 16; ++p) {
             gp_trigger(p, 1.0f);
-            auto x = render(SR * 0.4);
+            auto x = render(SR * 1.2);
             gp_release(p);
-            render(SR * 0.6);
-            if (!(finite(x) && peak(x) > 0.05f)) CHECK(false, "kit pad %d (%s) audible: %.3f", p, names[p], peak(x));
+            render(SR * 0.3);
+            gp_all_notes_off(); render(SR * 0.1);
+            if (!(finite(x) && peak(x) > 0.03f)) { padsOk = false; quiet = p; }
         }
-        CHECK(true, "every kit pad checked");
+        CHECK(loaded == 16 && finite(r) && peak(r) > 0.2f && peak(r) <= 1.0f && padsOk,
+              "kit %-9s: 16 sounds, demo plays (peak %.2f)%s%s", gp_kit_name(k), peak(r),
+              padsOk ? "" : " quiet pad: ", padsOk ? "" : gp_kit_pad_name(k, quiet));
+    }
+    {
+        gp_load_kit(0);
+        gp_load_kit_sound(3, 9, 5);
+        CHECK(gp_pad_has_sample(5), "single kit sound loads onto a pad");
+    }
+    resetAll();
+
+    // ------------------------------------------------- grooves
+    {
+        gp_load_kit(0);
+        render(BLOCK); gp_collect_garbage();
+        int roles[GP_R_COUNT] = {0, 1, 4, 2, 3, 5, 7, 6, -1, 8};
+        int n = gp_groove_count();
+        CHECK(n >= 50 && gp_genre_count() >= 9, "%d grooves in %d genres", n, gp_genre_count());
+        bool allOk = true; const char* bad = "";
+        for (int i = 0; i < n; ++i) {
+            gp_apply_groove(i, 3, roles);
+            int hits = 0; int len = gp_get_pattern_length(3);
+            for (int p = 0; p < 16; ++p) for (int st = 0; st < len; ++st) if (gp_get_step(3, p, st) > 0) ++hits;
+            if (hits < 3 || !(len == 16 || len == 32) || gp_groove_genre(i) < 0) { allOk = false; bad = gp_groove_name(i); }
+        }
+        CHECK(allOk, "every groove writes a pattern %s", bad);
+        gp_apply_groove(0, 3, roles);
+        CHECK(gp_get_step(3, 0, 0) == 1.0f && gp_get_step(3, 1, 4) == 1.0f && gp_get_step(3, 2, 2) == 1.0f, "roles map to the right pads");
+        int noClap[GP_R_COUNT] = {0, 1, -1, 2, -1, -1, -1, -1, -1, -1};
+        int house = -1; for (int i = 0; i < n; ++i) if (std::string(gp_groove_name(i)) == "Four On The Floor") house = i;
+        gp_apply_groove(house, 3, noClap);
+        CHECK(gp_get_step(3, 1, 4) > 0 && gp_get_step(3, 2, 2) > 0, "missing roles fall back (clap→snare, open→hat)");
+
+        std::vector<float> a1(16 * 64), a2(16 * 64), b1(16 * 64);
+        float sw = 0;
+        float bpm = gp_generate_groove(2, 42, 0.5f, 4, roles, &sw); gp_read_steps(4, a1.data());
+        gp_generate_groove(2, 42, 0.5f, 4, roles, &sw); gp_read_steps(4, a2.data());
+        gp_generate_groove(2, 43, 0.5f, 4, roles, &sw); gp_read_steps(4, b1.data());
+        int same = 0, diff = 0;
+        for (size_t i = 0; i < a1.size(); ++i) { if (a1[i] != a2[i]) ++same; if ((a1[i] > 0) != (b1[i] > 0)) ++diff; }
+        CHECK(same == 0 && diff > 0 && bpm > 100 && bpm < 145, "generator: same seed repeats, new seed differs (bpm %.0f)", bpm);
+        int distinct = 0; std::vector<std::vector<float>> seen;
+        for (int g = 0; g < gp_genre_count(); ++g)
+            for (unsigned sd = 1; sd <= 12; ++sd) {
+                gp_generate_groove(g, sd, 0.4f, 4, roles, &sw);
+                std::vector<float> v(16 * 64); gp_read_steps(4, v.data());
+                bool dup = false; for (auto& o : seen) if (o == v) { dup = true; break; }
+                if (!dup) { seen.push_back(v); ++distinct; }
+            }
+        CHECK(distinct > 90, "generator makes %d distinct grooves out of %d tries", distinct, gp_genre_count() * 12);
+        gp_select_pattern(4); render(BLOCK);
+        gp_set_playing(1);
+        auto r = render(SR * 3);
+        CHECK(finite(r) && peak(r) > 0.2f, "generated groove plays");
+        gp_set_playing(0); render(BLOCK);
+    }
+    resetAll();
+
+    // ------------------------------------------------- bounce
+    {
+        gp_load_kit(0);
+        render(BLOCK); gp_collect_garbage();
+        int frames = gp_bounce_frames(0, 2, 1.0f, SR);
+        double expect = 2 * 16 * SR * 15.0 / 92.0 + SR;
+        CHECK(std::abs(frames - expect) < 2, "bounce length = 2 bars + tail (%d)", frames);
+        std::vector<float> L(frames), R(frames);
+        int n = gp_bounce(0, 2, 1.0f, SR, L.data(), R.data(), frames);
+        Render b; b.L = L; b.R = R;
+        CHECK(n == frames && finite(b) && peak(b) > 0.3f && peak(b) <= 1.0f, "bounce renders audio (peak %.2f)", peak(b));
+        int first = firstAbove(b, 0.05f);
+        CHECK(first >= 0 && first < 200, "bounce starts on the first step (%d)", first);
+        CHECK(!gp_is_playing(), "bounce leaves live playback alone");
     }
 
     std::printf("\n%s (%d failures)\n", failures ? "FAILED" : "ALL PASSED", failures);

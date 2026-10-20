@@ -1,7 +1,11 @@
 import SwiftUI
 
+/// Layout: slim top bar, mode switch, one fixed-height panel, then the pads.
+/// Nothing scrolls, so nothing hides behind anything else.
 struct RootView: View {
     @EnvironmentObject var state: AppState
+
+    static let panelHeight: CGFloat = 236
 
     var body: some View {
         GeometryReader { geo in
@@ -10,31 +14,31 @@ struct RootView: View {
                 Theme.bg.ignoresSafeArea()
                 if wide {
                     HStack(alignment: .top, spacing: 16) {
-                        let side = min(geo.size.height - 8, geo.size.width * 0.48)
+                        let side = min(geo.size.height, geo.size.width * 0.5)
                         pads.frame(width: side, height: side)
                         VStack(spacing: 10) {
                             TopBar()
-                            tabs
-                            panel
+                            modeBar
+                            panel.frame(maxHeight: .infinity, alignment: .top)
                         }
                     }
                 } else {
                     VStack(spacing: 10) {
                         TopBar()
-                        tabs
-                        panel
-                        pads
-                            .frame(height: min(geo.size.width, geo.size.height * 0.44))
+                        modeBar
+                        panel.frame(height: Self.panelHeight, alignment: .top)
+                        pads.frame(maxHeight: .infinity)
                     }
                 }
                 if let t = state.toast {
                     Text(t)
                         .font(.system(size: 13, weight: .semibold, design: .rounded))
+                        .multilineTextAlignment(.center)
                         .padding(.horizontal, 14).padding(.vertical, 8)
                         .foregroundColor(.black)
                         .background(Capsule().fill(Theme.accent))
                         .shadow(color: .black.opacity(0.4), radius: 10, y: 4)
-                        .padding(.top, 84)
+                        .padding(.top, 48)
                         .transition(.move(edge: .top).combined(with: .opacity))
                         .allowsHitTesting(false)
                 }
@@ -42,30 +46,45 @@ struct RootView: View {
             .animation(.easeOut(duration: 0.2), value: state.toast)
         }
         .padding(.horizontal, 12)
-        .padding(.vertical, 8)
+        .padding(.top, 4)
+        .padding(.bottom, 6)
         .background(Theme.bg.ignoresSafeArea())
+        .sheet(isPresented: $state.showLibrary) { LibrarySheet() }
+        .sheet(isPresented: $state.showPadSettings) { PadSettingsSheet() }
+        .sheet(isPresented: $state.showSounds) { SoundBrowser() }
     }
 
-    private var tabs: some View {
-        Segmented(items: PanelTab.allCases.map { ($0, $0.rawValue) }, selection: $state.tab)
-    }
-
-    private var panel: some View {
-        ScrollView(.vertical, showsIndicators: false) {
-            Group {
-                switch state.tab {
-                case .sample: SamplePanel()
-                case .steps: StepsPanel()
-                case .fx: FXPanel()
+    private var modeBar: some View {
+        HStack(spacing: 2) {
+            ForEach(Mode.allCases) { m in
+                let on = state.mode == m
+                Button { state.mode = m } label: {
+                    Text(m.rawValue)
+                        .font(.system(size: 11, weight: .bold, design: .rounded))
+                        .tracking(0.8)
+                        .frame(maxWidth: .infinity).frame(height: 30)
+                        .foregroundColor(on ? Theme.text : Theme.faint)
+                        .overlay(alignment: .bottom) {
+                            Capsule().fill(on ? Theme.accent : Color.clear).frame(height: 2).padding(.horizontal, 24)
+                        }
                 }
+                .buttonStyle(.plain)
             }
-            .padding(.top, 2)
         }
-        .frame(maxHeight: .infinity)
+    }
+
+    @ViewBuilder
+    private var panel: some View {
+        switch state.mode {
+        case .sound: SoundPanel()
+        case .sequence: SequencePanel()
+        case .fx: FXPanel()
+        }
     }
 
     private var pads: some View {
         PadGrid(metas: state.pads, selected: state.selectedPad,
+                showSteps: state.mode == .sequence,
                 onPress: { pad in
                     Eng.trigger(pad)
                     state.select(pad)

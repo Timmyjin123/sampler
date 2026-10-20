@@ -17,23 +17,17 @@ A free Apple ID signs the app for 7 days; run it from Xcode again to refresh. Wi
 
 ## How it works
 
-**Pads.** Tap to play (multitouch). The last pad you touched is the one you edit.
+The screen is a drum machine: pads at the bottom, one panel above them with three modes.
 
-**Sampling.** Hold **REC** to record from the microphone into the selected pad and let go to keep it. The take is trimmed and normalized automatically. A quick tap latches recording; tap again to stop. **RESAMPLE** does the same with the app's own output — play your beat and bounce it to a pad. **IMPORT** loads any audio file from Files.
+**SOUND** — the selected pad: waveform with trim handles, knobs (tone, envelope, texture, sends). Hold **REC** to sample the mic into the pad (auto-trimmed and normalized; a quick tap latches). **SOUNDS** drops any of the 112 kit sounds onto the pad. ✂ chops a loop: *smart* slices find the hits, spread them over the pads and write a pattern that replays the loop. Rarely used options (loop, reverse, mono, choke, tempo sync) live in pad settings (tap the pad name).
 
-**Smart chop.** **CHOP → 16 slices** finds the hits in a loop, spreads them over the pads and writes a pattern that plays the loop back. Then press **VARIATE** in STEPS to remix it.
+**SEQUENCE** — patterns A–H, 16 big steps for the selected pad (tap or drag to paint, GHOST for quiet hits). **NEW GROOVE 🎲** invents a rhythm in the chosen style; **LIBRARY** has 64 hand-written grooves in 9 styles (boom bap, trap & drill, house, techno, breaks & DnB, latin & afro, funk & soul, electro, chill). Grooves play on any kit — kick, snare, hats etc. are found by pad name. **VARIATE** makes four variations to try while it plays.
 
-**Tempo.** Long samples get their tempo detected. **REPITCH** follows the project tempo like a turntable; **STRETCH** keeps the pitch. The metronome button next to it sets the project to the sample's tempo.
+**FX** — hold 1/4–1/32 to stutter, **TO PAD** resamples the output into the selected pad, presets, DJ filter, drive, crush, delay, reverb.
 
-**Steps.** 8 patterns (A–H), 16–64 steps. Tap or drag across cells to paint, **GHOST** for quiet hits. With ● pressed and the transport running, pads you play are recorded and quantized. Patterns switch at the end of the bar.
+**Library** (top right) — projects (new, open, duplicate, rename, delete), 7 kits (Boom Bap, Trap, House, Techno, Lo-Fi, Electro, Ambient), and export: the pattern as WAV (1 or 4 loops), as MIDI for an Ableton Drum Rack (pad 1 = C1), or all pad samples.
 
-**Variate.** Makes four variations of the current pattern (slice shuffles, ghost notes, fills, drops). Try V1–V4 while it plays, ↩ goes back, **KEEP** commits. **WILD** sets how far they go.
-
-**Texture.** Turns a pad into a granular cloud: hold it for drones and pads. SIZE, DENSITY, SPRAY, SCAN (0 = freeze), SCATTER (random pitch), WIDTH.
-
-**FX.** Hold 1/4–1/32 to stutter. DJ filter (left = low-pass, right = high-pass), drive, bitcrush, synced ping-pong delay and reverb. Each pad has its own delay/reverb send.
-
-The project saves itself (Files app → GrainPad → Project), including all samples as WAV.
+Projects save themselves to Files → GrainPad → Projects.
 
 ## Code
 

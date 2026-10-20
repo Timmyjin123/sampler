@@ -136,9 +136,43 @@ void  gp_make_variation(int pattern, unsigned seed, float amount, float* out);
 void  gp_apply_steps(int pattern, const float* steps);   // writes a full pattern
 void  gp_read_steps(int pattern, float* out);            // reads a full pattern
 
-// Fills all pads with a synthesized starter kit and a demo beat in pattern 0.
-void  gp_load_starter_kit(void);
-const char* gp_starter_kit_name(int pad);
+// ---- kits: synthesized sound sets with demo patterns, tempo and FX (main thread)
+int   gp_kit_count(void);
+const char* gp_kit_name(int kit);
+const char* gp_kit_description(int kit);
+const char* gp_kit_pad_name(int kit, int pad);
+// Replaces all pads, patterns, tempo and FX with the kit.
+void  gp_load_kit(int kit);
+// Loads one kit sound onto a pad (keeps everything else).
+void  gp_load_kit_sound(int kit, int kitPad, int dstPad);
+
+// ---- groove library (main thread)
+// Grooves are written for drum roles; rolePads[GP_R_COUNT] says which pad plays
+// each role (-1 = none), so the same groove works on any kit.
+typedef enum {
+    GP_R_KICK = 0, GP_R_SNARE, GP_R_CLAP, GP_R_HAT, GP_R_OPEN, GP_R_RIM,
+    GP_R_PERC, GP_R_PERC2, GP_R_RIDE, GP_R_BASS, GP_R_COUNT
+} GPRole;
+int   gp_genre_count(void);
+const char* gp_genre_name(int genre);
+int   gp_groove_count(void);
+const char* gp_groove_name(int groove);
+int   gp_groove_genre(int groove);
+float gp_groove_bpm(int groove);
+float gp_groove_swing(int groove);
+// Writes the groove into a pattern (clears it first, sets its length).
+void  gp_apply_groove(int groove, int pattern, const int* rolePads);
+// Invents a new groove in a genre by recombining and mutating library grooves.
+// Deterministic per seed. Returns a suggested tempo; writes the swing to *swing.
+float gp_generate_groove(int genre, unsigned seed, float wildness, int pattern,
+                         const int* rolePads, float* swing);
+
+// ---- export (main thread)
+// Frames needed to bounce `loops` passes of a pattern plus a tail.
+int   gp_bounce_frames(int pattern, int loops, float tailSeconds, double sampleRate);
+// Renders the pattern offline (does not disturb playback). Returns frames written.
+int   gp_bounce(int pattern, int loops, float tailSeconds, double sampleRate,
+                float* left, float* right, int maxFrames);
 
 // ---- feedback for the UI (cheap to poll) ----
 float gp_pad_activity(int pad);      // 0..1 envelope of the pad's voices

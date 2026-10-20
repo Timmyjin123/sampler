@@ -61,7 +61,7 @@ struct Knob: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
         }
-        .frame(minWidth: 52)
+        .frame(minWidth: 52, maxWidth: .infinity)
     }
 
     private var arc: some Shape {

@@ -76,7 +76,7 @@ static const float kPadDefaults[GP_PAD_PARAM_COUNT] = {
 };
 
 static const float kMasterDefaults[GP_M_COUNT] = {
-    0.8f, 0.5f, 0.2f, 0.0f, 0.0f, 3.0f, 0.35f, 0.5f, 0.5f, 0.4f, 0.0f, 92.0f, 0.0f, 1.0f,
+    0.68f, 0.5f, 0.2f, 0.0f, 0.0f, 3.0f, 0.35f, 0.5f, 0.5f, 0.4f, 0.0f, 92.0f, 0.0f, 1.0f,
 };
 
 static const float kDelaySteps[8] = {0.5f, 1.0f, 1.5f, 2.0f, 3.0f, 4.0f, 6.0f, 8.0f};
@@ -904,3 +904,45 @@ float gp_pad_activity(int pad) { return padOk(pad) ? E().padActivity[pad].load()
 float gp_pad_playhead(int pad) { return padOk(pad) ? E().padPlayhead[pad].load() : -1; }
 float gp_output_peak(int ch) { return E().outPeak[ch ? 1 : 0].load(); }
 unsigned gp_pad_hit_counter(int pad) { return padOk(pad) ? E().padHits[pad].load() : 0; }
+
+// ---- offline bounce: renders a pattern on a private engine copy (main thread)
+static double bounceStep(double sr) {
+    float bpm = clampf(E().master[GP_M_BPM].load(), 40.0f, 240.0f);
+    return sr * 15.0 / bpm;
+}
+
+int gp_bounce_frames(int pattern, int loops, float tailSeconds, double sr) {
+    if (!patOk(pattern) || loops < 1 || sr < 8000) return 0;
+    int len = E().patternLen[pattern].load();
+    return (int)std::ceil(loops * len * bounceStep(sr) + std::max(0.0f, tailSeconds) * sr);
+}
+
+int gp_bounce(int pattern, int loops, float tailSeconds, double sr, float* L, float* R, int maxFrames) {
+    if (!patOk(pattern) || !L || !R || loops < 1) return 0;
+    Engine& src = E();
+    int total = std::min(maxFrames, gp_bounce_frames(pattern, loops, tailSeconds, sr));
+    if (total <= 0) return 0;
+    auto* e = new Engine();
+    for (int p = 0; p < GP_NUM_PADS; ++p) {
+        for (int i = 0; i < GP_PAD_PARAM_COUNT; ++i) e->padParams[p][i].store(src.padParams[p][i].load());
+        e->padSample[p] = src.registry[p].get();   // kept alive by the registry while we render
+    }
+    for (int i = 0; i < GP_M_COUNT; ++i) e->master[i].store(src.master[i].load());
+    e->master[GP_M_REPEAT].store(0);
+    e->master[GP_M_METRONOME].store(0);
+    for (int a = 0; a < GP_NUM_PATTERNS; ++a) {
+        e->patternLen[a].store(src.patternLen[a].load());
+        for (int p = 0; p < GP_NUM_PADS; ++p)
+            for (int s = 0; s < GP_MAX_STEPS; ++s) e->steps[a][p][s].store(src.steps[a][p][s].load());
+    }
+    e->prepare(sr, 1024);
+    e->curPattern = pattern; e->queued = -1;
+    e->playing = true; e->curStep = -1; e->toNext = 0;
+    int music = std::min(total, (int)std::round(loops * src.patternLen[pattern].load() * bounceStep(sr)));
+    e->render(L, R, music);
+    e->playing = false;
+    for (auto& v : e->voices) v.gate = false;
+    if (total > music) e->render(L + music, R + music, total - music);
+    delete e;
+    return total;
+}

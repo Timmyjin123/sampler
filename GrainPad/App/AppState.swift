@@ -1,8 +1,9 @@
 import SwiftUI
 import Combine
 
-enum PanelTab: String, CaseIterable, Identifiable {
-    case sample = "SAMPLE", steps = "STEPS", fx = "FX"
+/// What the panel above the pads shows.
+enum Mode: String, CaseIterable, Identifiable {
+    case sound = "SOUND", sequence = "SEQUENCE", fx = "FX"
     var id: String { rawValue }
 }
 
@@ -11,18 +12,31 @@ struct PadMeta: Codable, Equatable {
     var color: Int
 }
 
+struct FXPreset: Identifiable {
+    let id = UUID()
+    let name: String
+    let values: [(GPMasterParam, Float)]
+}
+
 @MainActor
 final class AppState: ObservableObject {
     @Published var selectedPad = 0
-    @Published var tab: PanelTab = .sample
+    @Published var mode: Mode = .sound
     @Published var pads: [PadMeta]
-    /// Bumped whenever engine-side state changes, so views that read the
-    /// engine directly re-render.
+    @Published var projectName = "Untitled"
+    /// Bumped whenever engine-side state changes, so views that read the engine re-render.
     @Published var revision = 0
     @Published var recordingSource: GPRecordSource? = nil
     @Published var recordLatched = false
     @Published var toast: String? = nil
     @Published var stepPage = 0
+
+    // sheets
+    @Published var showLibrary = false
+    @Published var showPadSettings = false
+    @Published var showSounds = false
+    @Published var showGrooves = false
+    @Published var share: ShareItems? = nil
 
     // variations
     @Published var variations: [[Float]] = []
@@ -31,12 +45,35 @@ final class AppState: ObservableObject {
     @Published var variationAmount: Float = 0.5
 
     let audio = GPAudio.shared
+    let store = ProjectStore()
     private var clipboard: (params: [Float], pad: Int, meta: PadMeta)?
     private var dirty = false
     private var timers: [Timer] = []
     private var takeCounter = 1
     private var toastToken = 0
-    let store = ProjectStore()
+    private var pendingStart = false
+    private var booted = false
+
+    static let kitColors: [[Int]] = [
+        [0, 1, 2, 2, 7, 3, 0, 3, 4, 4, 5, 5, 6, 7, 6, 6],
+        [0, 1, 7, 2, 2, 3, 7, 3, 4, 4, 4, 4, 5, 6, 6, 0],
+        [0, 7, 2, 2, 2, 3, 1, 1, 3, 4, 4, 5, 5, 6, 6, 2],
+        [0, 0, 7, 2, 2, 2, 3, 3, 3, 4, 4, 4, 5, 6, 0, 6],
+        [0, 1, 2, 2, 3, 3, 7, 6, 5, 5, 5, 5, 4, 4, 1, 6],
+        [0, 1, 7, 2, 2, 1, 3, 3, 3, 6, 4, 4, 5, 6, 7, 2],
+        [0, 2, 3, 1, 6, 6, 4, 7, 4, 5, 0, 1, 1, 3, 6, 5],
+    ]
+
+    static let fxPresets: [FXPreset] = [
+        FXPreset(name: "Clean", values: [(GP_M_FILTER, 0.5), (GP_M_DRIVE, 0), (GP_M_CRUSH, 0), (GP_M_DELAY_FB, 0.3), (GP_M_REVERB_SIZE, 0.45)]),
+        FXPreset(name: "Dusty", values: [(GP_M_FILTER, 0.38), (GP_M_DRIVE, 0.12), (GP_M_CRUSH, 0.15), (GP_M_REVERB_SIZE, 0.5), (GP_M_REVERB_DAMP, 0.7)]),
+        FXPreset(name: "Tape", values: [(GP_M_FILTER, 0.44), (GP_M_DRIVE, 0.3), (GP_M_CRUSH, 0.03), (GP_M_DELAY_TIME, 5), (GP_M_DELAY_TONE, 0.3)]),
+        FXPreset(name: "Club", values: [(GP_M_FILTER, 0.5), (GP_M_DRIVE, 0.22), (GP_M_CRUSH, 0), (GP_M_DELAY_TIME, 3), (GP_M_DELAY_FB, 0.3), (GP_M_REVERB_SIZE, 0.35)]),
+        FXPreset(name: "Dub", values: [(GP_M_FILTER, 0.47), (GP_M_DRIVE, 0.1), (GP_M_DELAY_TIME, 4), (GP_M_DELAY_FB, 0.7), (GP_M_DELAY_TONE, 0.35), (GP_M_REVERB_SIZE, 0.7)]),
+        FXPreset(name: "Space", values: [(GP_M_FILTER, 0.5), (GP_M_DRIVE, 0), (GP_M_DELAY_TIME, 6), (GP_M_DELAY_FB, 0.55), (GP_M_REVERB_SIZE, 0.95), (GP_M_REVERB_DAMP, 0.3)]),
+        FXPreset(name: "Crushed", values: [(GP_M_FILTER, 0.5), (GP_M_DRIVE, 0.45), (GP_M_CRUSH, 0.55), (GP_M_REVERB_SIZE, 0.3)]),
+        FXPreset(name: "Radio", values: [(GP_M_FILTER, 0.66), (GP_M_RESO, 0.5), (GP_M_DRIVE, 0.35), (GP_M_CRUSH, 0.2)]),
+    ]
 
     init() {
         pads = (0..<Eng.padCount).map { PadMeta(name: "", color: $0 / 2) }
@@ -44,15 +81,17 @@ final class AppState: ObservableObject {
 
     // MARK: lifecycle
 
-    private var booted = false
-
     func boot() {
         guard !booted else { return }
         booted = true
         do { try audio.start() } catch { show("Audio failed to start: \(error.localizedDescription)") }
-        if !store.load(into: self) {
-            loadStarterKit(announce: false)
+        if !store.loadCurrent(into: self) {
+            store.beginNew()
+            applyKit(0)
+            projectName = "First Beat"
+            saveNow()
         }
+        changed()
         timers.append(Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { _ in
             Task { @MainActor in gp_collect_garbage() }
         })
@@ -117,8 +156,6 @@ final class AppState: ObservableObject {
 
     // MARK: sampling
 
-    private var pendingStart = false
-
     func beginRecord(_ source: GPRecordSource) {
         guard recordingSource == nil else { return }
         pendingStart = true
@@ -169,12 +206,6 @@ final class AppState: ObservableObject {
         }
     }
 
-    func cancelRecord() {
-        audio.cancelRecording()
-        recordingSource = nil
-        recordLatched = false
-    }
-
     func importFile(_ url: URL) {
         let pad = selectedPad
         let name = url.deletingPathExtension().lastPathComponent
@@ -218,8 +249,8 @@ final class AppState: ObservableObject {
         changed()
     }
 
-    /// Chops the selected pad onto pads starting at it, and (for smart chops)
-    /// writes a pattern that replays the original loop.
+    /// Chops the selected pad onto pads starting at it; smart chops also write
+    /// a pattern that replays the loop.
     func chop(slices: Int, equal: Bool) {
         let src = selectedPad
         guard Eng.hasSample(src) else { return }
@@ -238,7 +269,7 @@ final class AppState: ObservableObject {
         var msg = "\(n) slices"
         if !equal && Eng.pad(src, GP_P_SRC_BPM) > 0 {
             if target != Eng.currentPattern { Eng.selectPattern(target) }
-            msg += " · pattern \(patternName(target))"
+            msg += " · pattern \(patternName(target)) plays the loop"
         }
         show(msg)
         changed()
@@ -248,7 +279,6 @@ final class AppState: ObservableObject {
     func makeVariations() {
         let pattern = Eng.currentPattern
         if variationOriginal == nil { variationOriginal = Eng.readSteps(pattern) }
-        // generate from the original, not from a variation already applied
         let current = Eng.readSteps(pattern)
         if let orig = variationOriginal { Eng.applySteps(pattern, orig) }
         let base = UInt32.random(in: 1...UInt32.max - 8)
@@ -258,7 +288,7 @@ final class AppState: ObservableObject {
             out.withUnsafeMutableBufferPointer { gp_make_variation(Int32(pattern), base + UInt32(i), amount, $0.baseAddress) }
             return out
         }
-        if activeVariation == nil { Eng.applySteps(pattern, current) }
+        Eng.applySteps(pattern, current)
         if let a = activeVariation { Eng.applySteps(pattern, variations[a]) }
         changed()
     }
@@ -324,9 +354,136 @@ final class AppState: ObservableObject {
         changed()
     }
 
+    // MARK: kits and sounds
+
+    var kitCount: Int { Int(gp_kit_count()) }
+    func kitName(_ k: Int) -> String { String(cString: gp_kit_name(Int32(k))) }
+    func kitDescription(_ k: Int) -> String { String(cString: gp_kit_description(Int32(k))) }
+    func kitSoundName(_ k: Int, _ pad: Int) -> String { String(cString: gp_kit_pad_name(Int32(k), Int32(pad))) }
+
+    private func applyKit(_ k: Int) {
+        gp_load_kit(Int32(k))
+        let colors = Self.kitColors[k % Self.kitColors.count]
+        for p in 0..<Eng.padCount { pads[p] = PadMeta(name: kitSoundName(k, p), color: colors[p]) }
+        keepVariation()
+        selectedPad = 0
+    }
+
+    /// Replaces the sounds and patterns of the current project with a kit.
+    func loadKitIntoCurrent(_ k: Int) {
+        applyKit(k)
+        changed()
+        saveNow()
+        show("\(kitName(k)) loaded — press play")
+    }
+
+    /// Loads one sound onto the selected pad.
+    func loadSound(kit: Int, sound: Int) {
+        let p = selectedPad
+        gp_load_kit_sound(Int32(kit), Int32(sound), Int32(p))
+        pads[p] = PadMeta(name: kitSoundName(kit, sound), color: Self.kitColors[kit % Self.kitColors.count][sound])
+        Eng.trigger(p)
+        changed()
+    }
+
+    func applyFX(_ preset: FXPreset) {
+        for (param, value) in preset.values { Eng.setMaster(param, value) }
+        changed()
+        show("FX: \(preset.name)")
+    }
+
+    // MARK: grooves
+
+    @Published var grooveGenre = 0
+    @Published var grooveSetsTempo = true
+    @Published var lastGroove: String? = nil
+    private var grooveUndo: (pattern: Int, steps: [Float], length: Int, bpm: Float, swing: Float)?
+
+    var genreCount: Int { Int(gp_genre_count()) }
+    func genreName(_ g: Int) -> String { String(cString: gp_genre_name(Int32(g))) }
+    var grooveCount: Int { Int(gp_groove_count()) }
+    func grooveName(_ i: Int) -> String { String(cString: gp_groove_name(Int32(i))) }
+    func grooveGenreOf(_ i: Int) -> Int { Int(gp_groove_genre(Int32(i))) }
+    func grooves(in genre: Int) -> [Int] { (0..<grooveCount).filter { grooveGenreOf($0) == genre } }
+    var canUndoGroove: Bool { grooveUndo != nil }
+
+    /// Which pad plays each drum role, guessed from pad names (kits and user samples alike).
+    func rolePads() -> [Int32] {
+        var roles = [Int32](repeating: -1, count: Int(GP_R_COUNT.rawValue))
+        func set(_ r: GPRole, _ p: Int) { if roles[Int(r.rawValue)] < 0 { roles[Int(r.rawValue)] = Int32(p) } }
+        for p in 0..<Eng.padCount where Eng.hasSample(p) {
+            let n = pads[p].name.lowercased()
+            if n.contains("open") { set(GP_R_OPEN, p) }
+            else if n.contains("hat") || n.contains("hh") { set(GP_R_HAT, p) }
+            else if n.contains("kick") || n.contains("bd") || n == "pulse" { set(GP_R_KICK, p) }
+            else if n.contains("snare") || n.contains("sd") { set(GP_R_SNARE, p) }
+            else if n.contains("clap") || n.contains("snap") { set(GP_R_CLAP, p) }
+            else if n.contains("rim") || n.contains("tick") || n.contains("cowbell") { set(GP_R_RIM, p) }
+            else if n.contains("ride") || n.contains("cymbal") { set(GP_R_RIDE, p) }
+            else if n.contains("808") || n.contains("bass") || n.contains("sub") || n.contains("acid") { set(GP_R_BASS, p) }
+            else if n.contains("shaker") || n.contains("perc") || n.contains("conga") || n.contains("tom") || n.contains("brush") {
+                if roles[Int(GP_R_PERC.rawValue)] < 0 { set(GP_R_PERC, p) } else { set(GP_R_PERC2, p) }
+            }
+        }
+        // unnamed pads (slices, takes): fall back to the classic layout
+        let fallback: [(GPRole, Int)] = [(GP_R_KICK, 0), (GP_R_SNARE, 1), (GP_R_HAT, 2), (GP_R_OPEN, 3),
+                                         (GP_R_CLAP, 4), (GP_R_RIM, 5), (GP_R_PERC, 6), (GP_R_PERC2, 7)]
+        for (r, p) in fallback where roles[Int(r.rawValue)] < 0 && Eng.hasSample(p) && !roles.contains(Int32(p)) { set(r, p) }
+        return roles
+    }
+
+    private func rememberForUndo() {
+        let p = Eng.currentPattern
+        grooveUndo = (p, Eng.readSteps(p), Eng.patternLength(p), Eng.master(GP_M_BPM), Eng.master(GP_M_SWING))
+    }
+
+    func applyGroove(_ i: Int) {
+        keepVariation()
+        rememberForUndo()
+        let roles = rolePads()
+        roles.withUnsafeBufferPointer { gp_apply_groove(Int32(i), Int32(Eng.currentPattern), $0.baseAddress) }
+        if grooveSetsTempo {
+            Eng.setMaster(GP_M_BPM, gp_groove_bpm(Int32(i)))
+            Eng.setMaster(GP_M_SWING, gp_groove_swing(Int32(i)))
+        }
+        lastGroove = grooveName(i)
+        if !Eng.isPlaying { Eng.setPlaying(true) }
+        changed()
+    }
+
+    /// Invents a fresh groove in the chosen genre.
+    func rollGroove(genre: Int? = nil) {
+        keepVariation()
+        rememberForUndo()
+        let g = genre ?? grooveGenre
+        let roles = rolePads()
+        var swing: Float = 0
+        let bpm = roles.withUnsafeBufferPointer {
+            gp_generate_groove(Int32(g), UInt32.random(in: 1...UInt32.max), variationAmount, Int32(Eng.currentPattern), $0.baseAddress, &swing)
+        }
+        if grooveSetsTempo && bpm > 0 {
+            Eng.setMaster(GP_M_BPM, bpm)
+            Eng.setMaster(GP_M_SWING, swing)
+        }
+        lastGroove = "New \(genreName(g)) groove"
+        if !Eng.isPlaying { Eng.setPlaying(true) }
+        changed()
+    }
+
+    func undoGroove() {
+        guard let u = grooveUndo else { return }
+        Eng.setPatternLength(u.pattern, u.length)
+        Eng.applySteps(u.pattern, u.steps)
+        Eng.setMaster(GP_M_BPM, u.bpm)
+        Eng.setMaster(GP_M_SWING, u.swing)
+        grooveUndo = nil
+        lastGroove = nil
+        changed()
+    }
+
     // MARK: projects
 
-    func newProject() {
+    private func clearEngine() {
         Eng.setPlaying(false)
         gp_all_notes_off()
         for p in 0..<Eng.padCount {
@@ -338,25 +495,88 @@ final class AppState: ObservableObject {
         Eng.selectPattern(0)
         keepVariation()
         selectedPad = 0
-        store.resetFiles()
-        changed()
-        saveNow()
     }
 
-    func loadStarterKit(announce: Bool = true) {
-        Eng.setPlaying(false)
-        gp_all_notes_off()
-        gp_load_starter_kit()
-        let colors = [0, 1, 2, 2, 7, 3, 0, 3, 4, 4, 5, 5, 6, 7, 6, 6]
-        for p in 0..<16 {
-            pads[p] = PadMeta(name: String(cString: gp_starter_kit_name(Int32(p))), color: colors[p])
+    /// kit == nil makes an empty project.
+    func newProject(kit: Int?) {
+        saveNow()
+        store.beginNew()
+        if let k = kit {
+            applyKit(k)
+            projectName = store.uniqueName(kitName(k) + " Beat")
+        } else {
+            clearEngine()
+            Eng.setMaster(GP_M_BPM, 90)
+            projectName = store.uniqueName("New Project")
         }
-        keepVariation()
-        selectedPad = 0
-        store.resetFiles()
         changed()
         saveNow()
-        if announce { show("Starter kit loaded — press play") }
+        showLibrary = false
+        show("Created “\(projectName)”")
+    }
+
+    func openProject(_ id: String) {
+        guard id != store.currentID else { showLibrary = false; return }
+        saveNow()
+        keepVariation()
+        if store.load(id, into: self) {
+            selectedPad = 0
+            changed()
+            showLibrary = false
+            show("Opened “\(projectName)”")
+        } else {
+            show("Couldn't open that project")
+        }
+    }
+
+    func duplicateProject(_ id: String) {
+        if id == store.currentID { saveNow() }
+        _ = store.duplicate(id)
+        changed()
+    }
+
+    func renameProject(_ id: String, to name: String) {
+        let n = name.trimmingCharacters(in: .whitespaces)
+        guard !n.isEmpty else { return }
+        if id == store.currentID { projectName = n; saveNow() } else { store.rename(id, to: n) }
+        changed()
+    }
+
+    func deleteProject(_ id: String) {
+        let wasCurrent = id == store.currentID
+        store.delete(id)
+        if wasCurrent {
+            if let next = store.list().first, store.load(next.id, into: self) {
+                show("Opened “\(projectName)”")
+            } else {
+                store.beginNew()
+                clearEngine()
+                projectName = "New Project"
+                saveNow()
+            }
+        }
+        changed()
+    }
+
+    // MARK: export
+
+    func exportPatternAudio(loops: Int) {
+        saveNow()
+        guard let url = Exporter.patternWAV(state: self, pattern: Eng.currentPattern, loops: loops) else {
+            show("Export failed"); return
+        }
+        share = ShareItems(urls: [url])
+    }
+
+    func exportPatternMIDI() {
+        guard let url = Exporter.patternMIDI(state: self, pattern: Eng.currentPattern) else { show("Export failed"); return }
+        share = ShareItems(urls: [url])
+    }
+
+    func exportSamples() {
+        let urls = Exporter.samples(state: self)
+        if urls.isEmpty { show("No samples to export"); return }
+        share = ShareItems(urls: urls)
     }
 
     // MARK: misc

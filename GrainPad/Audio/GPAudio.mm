@@ -287,6 +287,35 @@ static BOOL decodeFile(NSURL *url, std::vector<float> &L, std::vector<float> &R,
     return gp_load_pad_sample(pad, L.data(), R.empty() ? nullptr : R.data(), (int)L.size(), sr, 0, 0);
 }
 
+static NSDictionary *wavSettings(double sr, int ch) {
+    return @{
+        AVFormatIDKey: @(kAudioFormatLinearPCM),
+        AVSampleRateKey: @(sr),
+        AVNumberOfChannelsKey: @(ch),
+        AVLinearPCMBitDepthKey: @24,
+        AVLinearPCMIsFloatKey: @NO,
+        AVLinearPCMIsBigEndianKey: @NO,
+        AVLinearPCMIsNonInterleaved: @NO,
+    };
+}
+
+- (BOOL)bouncePattern:(int)pattern loops:(int)loops toURL:(NSURL *)url error:(NSError **)error {
+    double sr = 48000.0;
+    int frames = gp_bounce_frames(pattern, loops, 2.0f, sr);
+    if (frames <= 0) return NO;
+    AVAudioFormat *fmt = [[AVAudioFormat alloc] initWithCommonFormat:AVAudioPCMFormatFloat32 sampleRate:sr
+                                                            channels:2 interleaved:NO];
+    AVAudioPCMBuffer *buf = [[AVAudioPCMBuffer alloc] initWithPCMFormat:fmt frameCapacity:(AVAudioFrameCount)frames];
+    if (!buf) return NO;
+    int n = gp_bounce(pattern, loops, 2.0f, sr, buf.floatChannelData[0], buf.floatChannelData[1], frames);
+    if (n <= 0) return NO;
+    buf.frameLength = (AVAudioFrameCount)n;
+    AVAudioFile *file = [[AVAudioFile alloc] initForWriting:url settings:wavSettings(sr, 2)
+                                               commonFormat:AVAudioPCMFormatFloat32 interleaved:NO error:error];
+    if (!file) return NO;
+    return [file writeFromBuffer:buf error:error];
+}
+
 - (BOOL)writePad:(int)pad toURL:(NSURL *)url error:(NSError **)error {
     int frames = gp_pad_frames(pad);
     int ch = gp_pad_channels(pad);

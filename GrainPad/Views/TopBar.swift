@@ -1,104 +1,132 @@
 import SwiftUI
 
+/// One slim row: transport, tempo, current pattern, project.
 struct TopBar: View {
     @EnvironmentObject var state: AppState
-    @State private var confirmNew = false
 
     var body: some View {
-        VStack(spacing: 8) {
-            HStack(spacing: 6) {
-                TransportButtons()
-                BPMControl()
-                metronome
-                Spacer(minLength: 0)
-                SampleRecordButton(source: .mic, compact: true)
-                menu
-            }
-            HStack(spacing: 4) {
-                PatternRow()
-                Spacer(minLength: 4)
-                Meter()
-                    .frame(width: 44, height: 18)
-            }
-        }
-        .confirmationDialog("Start a new empty project? The current one will be replaced.", isPresented: $confirmNew, titleVisibility: .visible) {
-            Button("New empty project", role: .destructive) { state.newProject() }
-            Button("Load starter kit", role: .destructive) { state.loadStarterKit() }
-            Button("Cancel", role: .cancel) {}
-        }
-    }
-
-    private var metronome: some View {
-        let mode = Int(Eng.master(GP_M_METRONOME))
-        return Button {
-            Eng.setMaster(GP_M_METRONOME, Float((mode + 1) % 3)); state.changed()
-            state.show(["Click off", "Click while recording", "Click always"][(mode + 1) % 3])
-        } label: {
-            Image(systemName: "metronome.fill")
-                .font(.system(size: 13, weight: .semibold))
-                .frame(width: 34, height: 30)
-                .foregroundColor(mode == 0 ? Theme.faint : (mode == 1 ? Theme.accent : .black))
-                .background(RoundedRectangle(cornerRadius: 7).fill(mode == 2 ? Theme.accent : Theme.raised))
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("Metronome")
-    }
-
-    private var menu: some View {
-        Menu {
-            Button { state.saveNow(); state.show("Saved") } label: { Label("Save now", systemImage: "square.and.arrow.down") }
-            Button { confirmNew = true } label: { Label("New project…", systemImage: "doc.badge.plus") }
-            Divider()
-            Text(String(format: "Latency ≈ %.0f ms · %.0f kHz", state.audio.latencyMs, state.audio.sampleRate / 1000))
-        } label: {
-            Image(systemName: "line.3.horizontal")
-                .font(.system(size: 14, weight: .semibold))
-                .frame(width: 34, height: 30)
+        HStack(spacing: 6) {
+            TransportButtons()
+            BPMControl()
+            PatternChip()
+            Spacer(minLength: 4)
+            Button { state.showLibrary = true } label: {
+                HStack(spacing: 6) {
+                    Text(state.projectName)
+                        .font(.system(size: 12, weight: .semibold, design: .rounded))
+                        .lineLimit(1)
+                        .frame(maxWidth: 110, alignment: .trailing)
+                    Image(systemName: "square.grid.2x2.fill").font(.system(size: 13, weight: .semibold))
+                }
+                .padding(.horizontal, 10)
+                .frame(height: 34)
                 .foregroundColor(Theme.text)
-                .background(RoundedRectangle(cornerRadius: 7).fill(Theme.raised))
+                .background(RoundedRectangle(cornerRadius: 9).fill(Theme.raised))
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Library: projects, kits and export")
         }
     }
 }
 
-/// Drag up/down to change tempo, tap repeatedly to tap the tempo in.
+struct TransportButtons: View {
+    @EnvironmentObject var state: AppState
+    @EnvironmentObject var ticker: Ticker
+
+    var body: some View {
+        let _ = ticker.frame
+        let playing = Eng.isPlaying
+        let recording = Eng.isRecording
+        HStack(spacing: 6) {
+            Button { state.togglePlay() } label: {
+                Image(systemName: playing ? "stop.fill" : "play.fill")
+                    .font(.system(size: 15, weight: .bold))
+                    .frame(width: 44, height: 34)
+                    .foregroundColor(playing ? .black : Theme.text)
+                    .background(RoundedRectangle(cornerRadius: 9).fill(playing ? Theme.go : Theme.raised))
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(playing ? "Stop" : "Play")
+            Button { state.toggleRecordSequence() } label: {
+                Circle()
+                    .fill(recording ? Color.white : Theme.rec)
+                    .frame(width: 13, height: 13)
+                    .frame(width: 40, height: 34)
+                    .background(RoundedRectangle(cornerRadius: 9).fill(recording ? Theme.rec : Theme.raised))
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Record into the pattern")
+        }
+    }
+}
+
+/// Current pattern; tap to jump to the sequencer.
+struct PatternChip: View {
+    @EnvironmentObject var state: AppState
+    @EnvironmentObject var ticker: Ticker
+
+    var body: some View {
+        let _ = ticker.frame
+        let queued = Eng.queuedPattern
+        Button { state.mode = .sequence } label: {
+            HStack(spacing: 3) {
+                Text(state.patternName(Eng.currentPattern))
+                    .font(.system(size: 15, weight: .heavy, design: .rounded))
+                if queued >= 0 {
+                    Image(systemName: "arrow.right").font(.system(size: 9, weight: .bold))
+                    Text(state.patternName(queued)).font(.system(size: 13, weight: .bold, design: .rounded))
+                }
+            }
+            .frame(minWidth: 34).padding(.horizontal, 4)
+            .frame(height: 34)
+            .foregroundColor(.black)
+            .background(RoundedRectangle(cornerRadius: 9).fill(Theme.accent))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Pattern \(state.patternName(Eng.currentPattern))")
+    }
+}
+
+/// Drag up/down to change tempo, tap repeatedly to tap it in.
 struct BPMControl: View {
     @EnvironmentObject var state: AppState
     @State private var dragStart: Float? = nil
     @State private var taps: [Date] = []
 
     var body: some View {
+        let _ = state.revision
         let bpm = Eng.master(GP_M_BPM)
-        VStack(spacing: 0) {
-            Text(String(format: "%.1f", bpm))
-                .font(.system(size: 15, weight: .semibold, design: .monospaced))
+        VStack(spacing: -1) {
+            Text(String(format: "%.0f", bpm))
+                .font(.system(size: 16, weight: .semibold, design: .monospaced))
                 .foregroundColor(dragStart != nil ? Theme.accent : Theme.text)
-            Text("BPM").font(.system(size: 8, weight: .bold, design: .rounded)).foregroundColor(Theme.faint)
+            Text("BPM").font(.system(size: 7, weight: .bold, design: .rounded)).foregroundColor(Theme.faint)
         }
-        .frame(width: 62, height: 30)
-        .background(RoundedRectangle(cornerRadius: 7).fill(Theme.raised))
+        .frame(width: 52, height: 34)
+        .background(RoundedRectangle(cornerRadius: 9).fill(Theme.raised))
         .contentShape(Rectangle())
         .gesture(
             DragGesture(minimumDistance: 4)
                 .onChanged { g in
                     if dragStart == nil { dragStart = bpm }
-                    let v = (dragStart ?? bpm) - Float(g.translation.height) / 4 * 0.5
-                    Eng.setMaster(GP_M_BPM, (min(max(v, 40), 240) * 2).rounded() / 2)
+                    let v = (dragStart ?? bpm) - Float(g.translation.height) / 3
+                    Eng.setMaster(GP_M_BPM, min(max(v, 40), 240).rounded())
+                    state.revision &+= 1
                 }
                 .onEnded { _ in dragStart = nil; state.changed() }
         )
         .simultaneousGesture(TapGesture().onEnded { tap() })
-        .accessibilityLabel("Tempo \(Int(bpm)) BPM")
+        .accessibilityLabel("Tempo \(Int(bpm)) BPM. Drag to change, tap to tap tempo")
     }
 
     private func tap() {
         let now = Date()
         taps = taps.filter { now.timeIntervalSince($0) < 2.5 } + [now]
-        guard taps.count >= 3 else { state.show("Tap \(4 - min(3, taps.count)) more…"); return }
+        guard taps.count >= 3 else { state.show("Tap tempo: keep tapping…"); return }
         let recent = Array(taps.suffix(5))
         let intervals = zip(recent.dropFirst(), recent).map { $0.timeIntervalSince($1) }
         let avg = intervals.reduce(0, +) / Double(intervals.count)
-        let bpm = Float(60 / avg)
-        Eng.setMaster(GP_M_BPM, (min(max(bpm, 40), 240) * 2).rounded() / 2)
+        Eng.setMaster(GP_M_BPM, min(max(Float(60 / avg), 40), 240).rounded())
         state.changed()
     }
 }
@@ -121,71 +149,4 @@ struct Meter: View {
             }
         }
     }
-}
-
-struct TransportButtons: View {
-    @EnvironmentObject var state: AppState
-    @EnvironmentObject var ticker: Ticker
-
-    var body: some View {
-        let _ = ticker.frame
-        let playing = Eng.isPlaying
-        let recording = Eng.isRecording
-        HStack(spacing: 6) {
-            iconButton(playing ? "stop.fill" : "play.fill", tint: playing ? Theme.go : Theme.text, filled: playing) {
-                state.togglePlay()
-            }
-            .accessibilityLabel(playing ? "Stop" : "Play")
-            iconButton("record.circle", tint: recording ? .white : Theme.rec, filled: recording, fill: Theme.rec) {
-                state.toggleRecordSequence()
-            }
-            .accessibilityLabel("Record pattern")
-        }
-    }
-
-    private func iconButton(_ name: String, tint: Color, filled: Bool, fill: Color = Theme.go, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: name)
-                .font(.system(size: 14, weight: .bold))
-                .frame(width: 40, height: 30)
-                .foregroundColor(filled ? (fill == Theme.go ? .black : .white) : tint)
-                .background(RoundedRectangle(cornerRadius: 7).fill(filled ? fill : Theme.raised))
-        }
-        .buttonStyle(.plain)
-    }
-}
-
-struct PatternRow: View {
-    @EnvironmentObject var state: AppState
-    @EnvironmentObject var ticker: Ticker
-
-    var body: some View {
-        let _ = ticker.frame
-        HStack(spacing: 4) {
-            ForEach(0..<Eng.patternCount, id: \.self) { p in patternChip(p) }
-        }
-    }
-
-    private func patternChip(_ p: Int) -> some View {
-        let current = Eng.currentPattern == p
-        let queued = Eng.queuedPattern == p
-        let empty = Eng.patternIsEmpty(p)
-        return Button { state.selectPattern(p) } label: {
-            Text(state.patternName(p))
-                .font(.system(size: 12, weight: .bold, design: .rounded))
-                .frame(width: 30, height: 24)
-                .foregroundColor(current ? .black : (empty ? Theme.faint : Theme.text))
-                .background(
-                    RoundedRectangle(cornerRadius: 6)
-                        .fill(current ? Theme.accent : Theme.raised)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 6)
-                        .stroke(Theme.accent, lineWidth: queued ? 1.5 : 0)
-                        .opacity(queued ? (ticker.frame % 16 < 8 ? 1 : 0.3) : 0)
-                )
-        }
-        .buttonStyle(.plain)
-    }
-
 }

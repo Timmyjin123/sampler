@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		06023CB81BFDFD74FAAF6A7A /* LibrarySheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75A61373F84B84ACDB58BFE5 /* LibrarySheet.swift */; };
+		17D7CD6C44AD600F44547530 /* GPGrooves.cpp in Sources */ = {isa = PBXBuildFile; fileRef = DC685EA43A5571F783E556D1 /* GPGrooves.cpp */; };
 		1D69CFB7D43D28C5015F7016 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F977C700792F3FC14465B089 /* Assets.xcassets */; };
 		52BBC65E4D1AC3F9C532ACD4 /* Ticker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 188E879CC6132E12C7702D72 /* Ticker.swift */; };
 		53E042151C19E32BBAB59C60 /* AudioToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A1D2E14DD1A0D5E599385DA6 /* AudioToolbox.framework */; };
@@ -14,17 +16,20 @@
 		6AE0322265C6103AB26DDE24 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D1E6F36B50C5F7B72CCF23F /* AppState.swift */; };
 		70B0CB8DF5DB4611064E4E3E /* GPAudio.mm in Sources */ = {isa = PBXBuildFile; fileRef = 5EBBD6F307D10E97DEBFF140 /* GPAudio.mm */; };
 		71BDE95512107C91C230E99B /* Engine+Swift.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA07919E6BCE57AABF0FA874 /* Engine+Swift.swift */; };
+		7FBAB24744661A0F5FA9A277 /* PadSettingsSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E91DED49F52599696B56E22 /* PadSettingsSheet.swift */; };
+		87303DBF24A10FB7A354D9DE /* SequencePanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F5F36C852CE74B7355067A6 /* SequencePanel.swift */; };
 		8EC96F917541F2A2698BE00F /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8B4B952D56BFCD871B8BF41A /* AVFoundation.framework */; };
 		8F23B49DFDEE4AF9682E3042 /* GrainPadApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 571DBC6156CD4C108F947CF0 /* GrainPadApp.swift */; };
 		9094C0D2C6431B2DEE30B504 /* Controls.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E63D8D25111B668AEA9B169 /* Controls.swift */; };
 		91085904D238C878F78F7D7D /* GPKit.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BB3D87B83CAEEE4CC9D4CD55 /* GPKit.cpp */; };
+		A03FCF206C173198D6C3AB3E /* SoundPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5A90DF8AC28A6ABE7F3B190 /* SoundPanel.swift */; };
 		A80C244A1F154A7A2848F0EF /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68C859CE1EB3D4215DEC5629 /* Theme.swift */; };
-		BD3CC6A4EE7B70843520CF59 /* StepsPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 715783CD941E8DE569C195F8 /* StepsPanel.swift */; };
 		C4F2E11250493EE47FC11193 /* FXPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = DADB1F6A9F7FC60B755DC2A5 /* FXPanel.swift */; };
 		C811CFD266206D17EBCC2244 /* GPAnalysis.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8F365458A26F9852DC6B6BC7 /* GPAnalysis.cpp */; };
-		CF32117FC1E442729B476025 /* SamplePanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2750B2D3F5FB4EED86E44E11 /* SamplePanel.swift */; };
+		CF0578D648A7DB4F3062C454 /* Browsers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44C70018168F4264FD846BD7 /* Browsers.swift */; };
 		D43D1D83763BD51A3BC42097 /* PadGrid.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9BE5E963D6854D3797CF255 /* PadGrid.swift */; };
 		D5412B7E5148AE288737D927 /* WaveformView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DA94441E02439BB687F7E8 /* WaveformView.swift */; };
+		D90A1C5A81FB57CC480D8E54 /* Exporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = EDADF17EC0F8CF0B1805B246 /* Exporter.swift */; };
 		DA300A67C4A4B3D8A0ED8F30 /* RecordButtons.swift in Sources */ = {isa = PBXBuildFile; fileRef = B22B1F1579484DE18E013F9C /* RecordButtons.swift */; };
 		DBFD8C190F1A0024B1F7A604 /* ProjectStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 471DC075B9F34930151EECB1 /* ProjectStore.swift */; };
 		E0EFCC5673C855D50E5C1C55 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3772EBAD51A1350DDE16B35E /* RootView.swift */; };
@@ -34,31 +39,36 @@
 /* Begin PBXFileReference section */
 		08FDBC597B69FCC388874529 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		188E879CC6132E12C7702D72 /* Ticker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Ticker.swift; sourceTree = "<group>"; };
-		2750B2D3F5FB4EED86E44E11 /* SamplePanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SamplePanel.swift; sourceTree = "<group>"; };
 		2D1E6F36B50C5F7B72CCF23F /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
 		3772EBAD51A1350DDE16B35E /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		38A007151ABE87CC01A5B6E9 /* GrainPad.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = GrainPad.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		44C70018168F4264FD846BD7 /* Browsers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Browsers.swift; sourceTree = "<group>"; };
 		471DC075B9F34930151EECB1 /* ProjectStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectStore.swift; sourceTree = "<group>"; };
 		571DBC6156CD4C108F947CF0 /* GrainPadApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GrainPadApp.swift; sourceTree = "<group>"; };
 		5EBBD6F307D10E97DEBFF140 /* GPAudio.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = GPAudio.mm; sourceTree = "<group>"; };
 		5F81D483B253638A3A77FABA /* GPInternal.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = GPInternal.hpp; sourceTree = "<group>"; };
 		68C859CE1EB3D4215DEC5629 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		6E63D8D25111B668AEA9B169 /* Controls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Controls.swift; sourceTree = "<group>"; };
-		715783CD941E8DE569C195F8 /* StepsPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StepsPanel.swift; sourceTree = "<group>"; };
+		75A61373F84B84ACDB58BFE5 /* LibrarySheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibrarySheet.swift; sourceTree = "<group>"; };
 		86ABACF860D7D1B6627F4AFC /* GrainPad-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "GrainPad-Bridging-Header.h"; sourceTree = "<group>"; };
 		8B4B952D56BFCD871B8BF41A /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = System/Library/Frameworks/AVFoundation.framework; sourceTree = SDKROOT; };
 		8F365458A26F9852DC6B6BC7 /* GPAnalysis.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = GPAnalysis.cpp; sourceTree = "<group>"; };
 		9544F12126AD44D8374D8B03 /* TopBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TopBar.swift; sourceTree = "<group>"; };
+		9E91DED49F52599696B56E22 /* PadSettingsSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PadSettingsSheet.swift; sourceTree = "<group>"; };
+		9F5F36C852CE74B7355067A6 /* SequencePanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SequencePanel.swift; sourceTree = "<group>"; };
 		A1D2E14DD1A0D5E599385DA6 /* AudioToolbox.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AudioToolbox.framework; path = System/Library/Frameworks/AudioToolbox.framework; sourceTree = SDKROOT; };
 		A50D9F2C26FEC99496A90D6A /* GPEngine.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = GPEngine.h; sourceTree = "<group>"; };
 		A9BE5E963D6854D3797CF255 /* PadGrid.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PadGrid.swift; sourceTree = "<group>"; };
 		B22B1F1579484DE18E013F9C /* RecordButtons.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordButtons.swift; sourceTree = "<group>"; };
 		BB3D87B83CAEEE4CC9D4CD55 /* GPKit.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = GPKit.cpp; sourceTree = "<group>"; };
+		C5A90DF8AC28A6ABE7F3B190 /* SoundPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoundPanel.swift; sourceTree = "<group>"; };
 		D0DA94441E02439BB687F7E8 /* WaveformView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaveformView.swift; sourceTree = "<group>"; };
 		DA07919E6BCE57AABF0FA874 /* Engine+Swift.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Engine+Swift.swift"; sourceTree = "<group>"; };
 		DADB1F6A9F7FC60B755DC2A5 /* FXPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FXPanel.swift; sourceTree = "<group>"; };
+		DC685EA43A5571F783E556D1 /* GPGrooves.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = GPGrooves.cpp; sourceTree = "<group>"; };
 		E959533DBDDC0BCD8C23FFE2 /* GPEngine.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = GPEngine.cpp; sourceTree = "<group>"; };
 		EDA18F976A685A983771BD4C /* GPAudio.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = GPAudio.h; sourceTree = "<group>"; };
+		EDADF17EC0F8CF0B1805B246 /* Exporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Exporter.swift; sourceTree = "<group>"; };
 		F5CA1DA7F6A57B05F1CE874F /* GPDSP.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = GPDSP.hpp; sourceTree = "<group>"; };
 		F977C700792F3FC14465B089 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -103,6 +113,7 @@
 			children = (
 				2D1E6F36B50C5F7B72CCF23F /* AppState.swift */,
 				DA07919E6BCE57AABF0FA874 /* Engine+Swift.swift */,
+				EDADF17EC0F8CF0B1805B246 /* Exporter.swift */,
 				571DBC6156CD4C108F947CF0 /* GrainPadApp.swift */,
 				471DC075B9F34930151EECB1 /* ProjectStore.swift */,
 				68C859CE1EB3D4215DEC5629 /* Theme.swift */,
@@ -132,13 +143,16 @@
 		C4A31A031AE9981EAF54618F /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				44C70018168F4264FD846BD7 /* Browsers.swift */,
 				6E63D8D25111B668AEA9B169 /* Controls.swift */,
 				DADB1F6A9F7FC60B755DC2A5 /* FXPanel.swift */,
+				75A61373F84B84ACDB58BFE5 /* LibrarySheet.swift */,
 				A9BE5E963D6854D3797CF255 /* PadGrid.swift */,
+				9E91DED49F52599696B56E22 /* PadSettingsSheet.swift */,
 				B22B1F1579484DE18E013F9C /* RecordButtons.swift */,
 				3772EBAD51A1350DDE16B35E /* RootView.swift */,
-				2750B2D3F5FB4EED86E44E11 /* SamplePanel.swift */,
-				715783CD941E8DE569C195F8 /* StepsPanel.swift */,
+				9F5F36C852CE74B7355067A6 /* SequencePanel.swift */,
+				C5A90DF8AC28A6ABE7F3B190 /* SoundPanel.swift */,
 				9544F12126AD44D8374D8B03 /* TopBar.swift */,
 				D0DA94441E02439BB687F7E8 /* WaveformView.swift */,
 			);
@@ -161,6 +175,7 @@
 				F5CA1DA7F6A57B05F1CE874F /* GPDSP.hpp */,
 				E959533DBDDC0BCD8C23FFE2 /* GPEngine.cpp */,
 				A50D9F2C26FEC99496A90D6A /* GPEngine.h */,
+				DC685EA43A5571F783E556D1 /* GPGrooves.cpp */,
 				5F81D483B253638A3A77FABA /* GPInternal.hpp */,
 				BB3D87B83CAEEE4CC9D4CD55 /* GPKit.cpp */,
 			);
@@ -238,6 +253,7 @@
 			files = (
 				6AE0322265C6103AB26DDE24 /* AppState.swift in Sources */,
 				71BDE95512107C91C230E99B /* Engine+Swift.swift in Sources */,
+				D90A1C5A81FB57CC480D8E54 /* Exporter.swift in Sources */,
 				8F23B49DFDEE4AF9682E3042 /* GrainPadApp.swift in Sources */,
 				DBFD8C190F1A0024B1F7A604 /* ProjectStore.swift in Sources */,
 				A80C244A1F154A7A2848F0EF /* Theme.swift in Sources */,
@@ -245,14 +261,18 @@
 				70B0CB8DF5DB4611064E4E3E /* GPAudio.mm in Sources */,
 				C811CFD266206D17EBCC2244 /* GPAnalysis.cpp in Sources */,
 				5F3450C99B3AED4240547F62 /* GPEngine.cpp in Sources */,
+				17D7CD6C44AD600F44547530 /* GPGrooves.cpp in Sources */,
 				91085904D238C878F78F7D7D /* GPKit.cpp in Sources */,
+				CF0578D648A7DB4F3062C454 /* Browsers.swift in Sources */,
 				9094C0D2C6431B2DEE30B504 /* Controls.swift in Sources */,
 				C4F2E11250493EE47FC11193 /* FXPanel.swift in Sources */,
+				06023CB81BFDFD74FAAF6A7A /* LibrarySheet.swift in Sources */,
 				D43D1D83763BD51A3BC42097 /* PadGrid.swift in Sources */,
+				7FBAB24744661A0F5FA9A277 /* PadSettingsSheet.swift in Sources */,
 				DA300A67C4A4B3D8A0ED8F30 /* RecordButtons.swift in Sources */,
 				E0EFCC5673C855D50E5C1C55 /* RootView.swift in Sources */,
-				CF32117FC1E442729B476025 /* SamplePanel.swift in Sources */,
-				BD3CC6A4EE7B70843520CF59 /* StepsPanel.swift in Sources */,
+				87303DBF24A10FB7A354D9DE /* SequencePanel.swift in Sources */,
+				A03FCF206C173198D6C3AB3E /* SoundPanel.swift in Sources */,
 				FC0EC1802D4BB3093773A641 /* TopBar.swift in Sources */,
 				D5412B7E5148AE288737D927 /* WaveformView.swift in Sources */,
 			);
